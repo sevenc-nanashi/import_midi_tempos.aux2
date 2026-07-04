@@ -1,0 +1,43 @@
+// 設定ファイルについては https://github.com/sevenc-nanashi/aviutl2-cli を参照してください。
+amends "https://raw.githubusercontent.com/sevenc-nanashi/aviutl2-cli/refs/tags/0.9.0/src/AviUtl2CliConfig.pkl"
+
+project {
+  id = "sevenc-nanashi.import_midi_tempos-aux2"
+  name = "import_midi_tempos.aux2"
+  version = "0.1.0"
+}
+
+development {
+  aviutl2_version = "latest"
+  catalog_dependencies = List("sevenc-nanashi.aviutl2-rs.rusty_metronome_plugin")
+}
+
+artifacts {
+  ["import_midi_tempos-aux2"] {
+    destination = "Plugin/import_midi_tempos.aux2"
+    profiles {
+      ["debug"] {
+        build = "cargo build"
+        source = "target/debug/import_midi_tempos_aux2.dll"
+      }
+      ["release"] {
+        build = "cargo build --release"
+        source = "target/release/import_midi_tempos_aux2.dll"
+      }
+    }
+  }
+}
+
+catalog {
+  id = "sevenc-nanashi.import_midi_tempos-aux2"
+  license_path = "LICENSE"
+  download_repo {
+    owner = "sevenc-nanashi"
+    repo = "import_midi_tempos-aux2"
+  }
+}
+
+release {
+  prebuild = "cargo about generate about.hbs --output-file release/package.txt"
+  package_template = "./release/package.txt"
+}

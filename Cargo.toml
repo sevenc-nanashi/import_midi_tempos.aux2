@@ -1,0 +1,13 @@
+[package]
+name = "import_midi_tempos-aux2"
+version = "0.0.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+name = "import_midi_tempos_aux2"
+
+[dependencies]
+aviutl2 = "0.37.0"
+midly = "0.5.3"
+native-dialog = "0.9.7"
