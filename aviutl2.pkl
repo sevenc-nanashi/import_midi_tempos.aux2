@@ -1,5 +1,5 @@
 // 設定ファイルについては https://github.com/sevenc-nanashi/aviutl2-cli を参照してください。
-amends "https://raw.githubusercontent.com/sevenc-nanashi/aviutl2-cli/refs/tags/0.9.0/src/AviUtl2CliConfig.pkl"
+amends "https://raw.githubusercontent.com/sevenc-nanashi/aviutl2-cli/refs/tags/0.9.1/src/AviUtl2CliConfig.pkl"
 
 project {
   id = "sevenc-nanashi.import_midi_tempos-aux2"

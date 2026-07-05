@@ -8,6 +8,6 @@ crate-type = ["cdylib"]
 name = "import_midi_tempos_aux2"
 
 [dependencies]
-aviutl2 = "0.37.0"
+aviutl2 = "0.38.0"
 midly = "0.5.3"
 native-dialog = "0.9.7"
