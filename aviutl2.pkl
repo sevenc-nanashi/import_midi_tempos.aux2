@@ -26,6 +26,10 @@ artifacts {
       }
     }
   }
+  ["English-import_midi_tempos-aux2-aul2"] {
+    destination = "Language/English.import_midi_tempos-aux2.aul2"
+    source = "i18n/English.import_midi_tempos-aux2.aul2"
+  }
 }
 
 catalog {
@@ -33,7 +37,7 @@ catalog {
   license_path = "LICENSE"
   download_repo {
     owner = "sevenc-nanashi"
-    repo = "import_midi_tempos-aux2"
+    repo = "import_midi_tempos.aux2"
   }
 }
 

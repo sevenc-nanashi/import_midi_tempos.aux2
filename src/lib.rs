@@ -15,7 +15,7 @@ impl aviutl2::generic::GenericPlugin for ImportMidiTemposAux2 {
         aviutl2::generic::GenericPluginTable {
             name: "import_midi_tempos.aux2".to_string(),
             information: format!(
-                "Import MIDI file as BPM Grid / v{} / https://github.com/sevenc-nanashi/import_midi_tempos.aux2",
+                "Import MIDI file as BPM Grid and markers / v{} / https://github.com/sevenc-nanashi/import_midi_tempos.aux2",
                 env!("CARGO_PKG_VERSION")
             ),
         }
@@ -29,7 +29,7 @@ impl aviutl2::generic::GenericPlugin for ImportMidiTemposAux2 {
 
 #[aviutl2::generic::menus]
 impl ImportMidiTemposAux2 {
-    #[import(name = "[import_midi_tempos.aux2] MIDIファイルからBPMグリッドを設定")]
+    #[import(name = "[import_midi_tempos.aux2] MIDIファイルからBPMグリッドとマーカーを設定")]
     fn import_midi_tempos() -> aviutl2::common::AnyResult<()> {
         let Some(file) = native_dialog::FileDialogBuilder::default()
             .add_filter("MIDIファイル", ["mid", "midi"])
@@ -40,10 +40,37 @@ impl ImportMidiTemposAux2 {
         };
         let midi_data = std::fs::read(&file)?;
         let midi = midly::Smf::parse(&midi_data)?;
-        let bpm_info = midi_to_bpm_info(&midi)?;
+        let (bpm_info, markers) = midi_to_markers(&midi)?;
+        let existing_markers = EDIT_HANDLE.call_read_section(|r| r.get_mark_frame_list())??;
+        let overwrite = if !existing_markers.is_empty() && !markers.is_empty() {
+            native_dialog::MessageDialogBuilder::default()
+                .set_title("import_midi_tempos.aux2")
+                .set_text(aviutl2::config::translate(
+                    "既存のマーカーが削除されます。続行しますか？",
+                ))
+                .set_level(native_dialog::MessageLevel::Warning)
+                .confirm()
+                .show()?
+        } else {
+            false
+        };
 
-        EDIT_HANDLE
-            .call_edit_section(move |edit_section| edit_section.set_grid_bpm_list(&bpm_info))??;
+        EDIT_HANDLE.call_edit_section(move |edit_section| {
+            if overwrite {
+                for frame in existing_markers {
+                    edit_section.clear_mark_frame(frame)?;
+                }
+            }
+
+            for TimedMarkerEvent { time, marker } in markers {
+                let frame = time * *edit_section.info.fps.numer() as f64
+                    / *edit_section.info.fps.denom() as f64;
+                edit_section.set_mark_frame(frame.round() as _, &marker)?;
+            }
+
+            edit_section.set_grid_bpm_list(&bpm_info)?;
+            aviutl2::anyhow::Ok(())
+        })??;
         Ok(())
     }
 
@@ -64,6 +91,7 @@ impl ImportMidiTemposAux2 {
 enum MidiGridEvent {
     Tempo(u32),
     TimeSignature { numerator: u8 },
+    Marker(String),
 }
 
 struct TimedMidiGridEvent {
@@ -71,7 +99,14 @@ struct TimedMidiGridEvent {
     event: MidiGridEvent,
 }
 
-fn midi_to_bpm_info(midi: &midly::Smf<'_>) -> aviutl2::common::AnyResult<Vec<BpmInfo>> {
+struct TimedMarkerEvent {
+    time: f64,
+    marker: String,
+}
+
+fn midi_to_markers(
+    midi: &midly::Smf<'_>,
+) -> aviutl2::common::AnyResult<(Vec<BpmInfo>, Vec<TimedMarkerEvent>)> {
     let (Format::SingleTrack | Format::Parallel) = midi.header.format else {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
@@ -107,6 +142,12 @@ fn midi_to_bpm_info(midi: &midly::Smf<'_>) -> aviutl2::common::AnyResult<Vec<Bpm
                             event: MidiGridEvent::TimeSignature { numerator },
                         })
                     }
+                    TrackEventKind::Meta(MetaMessage::Marker(marker)) => Some(TimedMidiGridEvent {
+                        tick,
+                        event: MidiGridEvent::Marker(
+                            std::string::String::from_utf8_lossy(marker).to_string(),
+                        ),
+                    }),
                     _ => None,
                 }
             })
@@ -116,11 +157,13 @@ fn midi_to_bpm_info(midi: &midly::Smf<'_>) -> aviutl2::common::AnyResult<Vec<Bpm
         let event_order = match event.event {
             MidiGridEvent::TimeSignature { .. } => 0,
             MidiGridEvent::Tempo(_) => 1,
+            MidiGridEvent::Marker(_) => 2,
         };
         (event.tick, event_order)
     });
 
     let mut bpm_info = Vec::new();
+    let mut marker_info = Vec::new();
     let mut current_tick = 0_u64;
     let mut current_time = 0.0_f64;
     let mut current_tempo = 500_000_u32;
@@ -183,10 +226,16 @@ fn midi_to_bpm_info(midi: &midly::Smf<'_>) -> aviutl2::common::AnyResult<Vec<Bpm
                     ),
                 );
             }
+            MidiGridEvent::Marker(marker) => {
+                marker_info.push(TimedMarkerEvent {
+                    time: current_time,
+                    marker,
+                });
+            }
         }
     }
 
-    Ok(bpm_info)
+    Ok((bpm_info, marker_info))
 }
 
 fn push_bpm_info(bpm_info: &mut Vec<BpmInfo>, item: BpmInfo) {

@@ -1,0 +1,4 @@
+[import_midi_tempos.aux2]
+[import_midi_tempos.aux2] MIDIファイルからBPMグリッドとマーカーを設定=[import_midi_tempos.aux2] Configure BPM grid and markers from MIDI file
+BPMグリッドをリセット=Reset BPM grid
+既存のマーカーが削除されます。続行しますか？=Existing markers will be deleted. Do you want to continue?
